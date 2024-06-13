@@ -1,0 +1,4 @@
+ckpts/
+tools/wandb/
+tools/check_dataset.ipynb
+sirformer.ipynb

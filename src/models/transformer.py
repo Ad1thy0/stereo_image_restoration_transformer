@@ -7,7 +7,8 @@ from typing import Optional
 import torch
 from torch import nn, Tensor
 from torch.utils.checkpoint import checkpoint
-from torch._six import container_abcs
+#from torch._six import container_abcs
+import collections.abc as container_abcs
 
 from .model import *
 from .rcan import RCAB, default_conv, RCAN
@@ -43,7 +44,7 @@ class Transformer(nn.Module):
     Transformer computes self (intra image) and cross (inter image) attention
     """
 
-    def __init__(self, img_size = (30, 90), hidden_dim: int = 64, nhead_1: int = 4, nhead_2=2, nhead_3 = 4, num_attn_layers: int = 6, depth = 1, win_size = 5):
+    def __init__(self, img_size = (30, 90), hidden_dim: int = 64, nhead_1: int = 4, nhead_2=2, nhead_3 = 4, num_attn_layers: int = 6, depth = 1, win_size = 8):
         super().__init__()
 
         self.img_size = to_2tuple(img_size)
@@ -67,16 +68,16 @@ class Transformer(nn.Module):
 
         self.SAT = SAT(dim=hidden_dim, input_resolution=img_size, num_heads=nhead_2, win_size=[1, img_size[1]], token_mlp='ffn')
 
-        self.SFT = SFT(dim=hidden_dim, input_resolution=img_size, num_heads=nhead_3, mask=[1, 5],)
+        self.SFT = SFT(dim=hidden_dim, input_resolution=img_size, num_heads=nhead_3, mask=[1, 8],)
 
         self.norm = nn.LayerNorm(hidden_dim)
 
         # reconstruction
         self.reconstruct = RCAN(n_feats=32)
-        self.upconv1 = nn.Conv2d(hidden_dim, hidden_dim * 4, 3, 1, 1, bias=True)
+        self.upconv1 = nn.Conv2d(hidden_dim, hidden_dim * 1, 3, 1, 1, bias=True)
         self.conv_last = nn.Conv2d(hidden_dim, 3, 3, 1, 1, bias=True)
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
-        self.pixel_shuffle = nn.PixelShuffle(2)
+#        self.pixel_shuffle = nn.PixelShuffle(2)
 
 
         self.hidden_dim = hidden_dim
@@ -177,11 +178,13 @@ class Transformer(nn.Module):
         feat_right = feat[bs:]
 
         feat_left = self.reconstruct(feat_left)
-        feat_left = self.lrelu(self.pixel_shuffle(self.upconv1(feat_left)))
+#        feat_left = self.lrelu(self.pixel_shuffle(self.upconv1(feat_left)))
+        feat_left = self.lrelu(self.upconv1(feat_left))
         out_left = self.conv_last(feat_left)
 
         feat_right = self.reconstruct(feat_right)
-        feat_right = self.lrelu(self.pixel_shuffle(self.upconv1(feat_right)))
+#        feat_right = self.lrelu(self.pixel_shuffle(self.upconv1(feat_right)))
+        feat_right = self.lrelu(self.upconv1(feat_right))
         out_right = self.conv_last(feat_right)
 
         return out_left, out_right

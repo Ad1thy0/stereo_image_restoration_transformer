@@ -34,14 +34,14 @@ class SIRFormer(nn.Module):
         feat_right = self.head(right_img)
         feat_left = self.feature_extraction(feat_left)
         feat_right = self.feature_extraction(feat_right)
-        left_up = F.interpolate(left_img, scale_factor=2, mode='bicubic', align_corners=False)
-        right_up = F.interpolate(right_img, scale_factor=2, mode='bicubic', align_corners=False)
+        #left_up = F.interpolate(left_img, scale_factor=2, mode='bicubic', align_corners=False)
+        #right_up = F.interpolate(right_img, scale_factor=2, mode='bicubic', align_corners=False)
         
         # pos_enc = self.pos_encoder(feat_left)  # 2W-1*C
         # pos_enc_down = self.pos_encoder(self.downsample(feat_left))
         out_left_sr, out_right_sr = self.transformer(feat_left, feat_right, None, None)
-        left_sr = out_left_sr + left_up
-        right_sr = out_right_sr + right_up
+        left_sr = out_left_sr + left_img
+        right_sr = out_right_sr + right_img
 
         left_sr = torch.clamp(left_sr, 0., 1.)
         right_sr = torch.clamp(right_sr, 0., 1.)
